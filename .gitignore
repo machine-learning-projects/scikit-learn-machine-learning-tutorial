@@ -1,5 +1,5 @@
-
-# Created by https://www.gitignore.io/api/linux,osx,windows,python,pycharm
+### Data ###
+/data
 
 ### Linux ###
 *~
@@ -208,5 +208,5 @@ fabric.properties
 
 # *.iml
 # modules.xml
-# .idea/misc.xml 
+# .idea/misc.xml
 # *.ipr
