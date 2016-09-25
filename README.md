@@ -21,3 +21,8 @@ Show you simple machine learning can actually be, where the real hard part is ac
 Cover how to acquire, label and organize data, as well as figure out which machine learning algorithm to use.  
 [Video](https://youtu.be/AleGZ9dkfPs?list=PLQVvvaa0QuDd0flgGphKCej-9jp-QdzZ3)
 [Text](https://pythonprogramming.net/data-acquisition-machine-learning/)
+
+## Part 4 - Parsing data
+How to handle our data set for machine learning. Cover basic code regarding how to pull specific data points out of the file.  
+[Video](https://youtu.be/rAdAVcS4aL0?list=PLQVvvaa0QuDd0flgGphKCej-9jp-QdzZ3)
+[Text](https://pythonprogramming.net/getting-data-machine-learning/?completed=/data-acquisition-machine-learning/)
