@@ -1,8 +1,12 @@
-import os  # os for directory interaction
-import time  # time information
-from datetime import datetime  # date information
+from matplotlib import style
 
+style.use('dark_background')
 import pandas as pd
+import os
+import time
+from datetime import datetime
+import matplotlib.pyplot as plt
+import re
 
 path = "../../data/input/intraQuarter"  # location of data from part 3
 
@@ -13,12 +17,31 @@ def Key_Stats(gather="Total Debt/Equity (mrq)"):
     # print(stock_list)
     # store the creation of a new "DataFrame" object from Pandas,
     # where we specify the columns to be date, unix, ticker, and DE ratio
-    df = pd.DataFrame(columns=['Date', 'Unix', 'Ticker', 'DE Ratio'])
+    df = pd.DataFrame(
+        columns=['Date',
+                 'Unix',
+                 'Ticker',
+                 'DE Ratio',
+                 'Price',
+                 'stock_p_change',
+                 'SP500',
+                 'sp500_p_change',
+                 'Difference',  # difference between stock and market
+                 'Status'])  # stock's performance
     sp500_df = pd.DataFrame.from_csv("../../data/input/YAHOO-INDEX_GSPC.csv")
+
+    ticker_list = []
 
     for each_dir in stock_list[1:25]:  # go through every dir (each ticker)
         each_file = os.listdir(each_dir)  # list each file in that stock's dir
         ticker = each_dir.split("\\")[1]  # windows needs double back slashes
+        ticker_list.append(ticker)
+
+        # Want to calculate % change as we go
+        # Need to start over with the % change each time the stock changes
+        starting_stock_value = False
+        starting_sp500_value = False
+
         if len(each_file) > 0:  # dir not empty
             for file in each_file:
                 # files are stored under their ticker with a file name of the date and time their information was pulled
@@ -34,8 +57,13 @@ def Key_Stats(gather="Total Debt/Equity (mrq)"):
                 # search for "gather" term - feature we want
                 # split by opening and closing table data tags
                 try:
-                    # redefine DataFrame object as the previous DataFrame object with the new data appended to it
-                    value = float(source.split(gather + ':</td><td class="yfnc_tabledata1">')[1].split('</td>')[0])
+                    try:
+                        # redefine DataFrame object as the previous DataFrame object with the new data appended to it
+                        value = float(source.split(gather + ':</td><td class="yfnc_tabledata1">')[1].split('</td>')[0])
+                    except:
+                        value = float(
+                            source.split(gather + ':</td>\n<td class="yfnc_tabledata1">')[1].split('</td>')[0])
+
                     # print(ticker + ":", value)
 
                     # try-catch because some data may have been pulled on weekend, where S&P dataset is not complete
@@ -50,17 +78,86 @@ def Key_Stats(gather="Total Debt/Equity (mrq)"):
                         sp500_value = float(row["Adjusted Close"])
 
                     # stock price to compare to S&P value
-                    stock_price = float(source.split('</small><big><b>')[1].split('</b></big>')[0])
+                    try:
+                        stock_price = float(source.split('</small><big><b>')[1].split('</b></big>')[0])
+                        # print("stock_price:",stock_price,"ticker:", ticker)
+                    except:
+                        try:
+                            stock_price = (source.split('</small><big><b>')[1].split('</b></big>')[0])
+                            # print(stock_price)
+
+                            stock_price = re.search(r'(\d{1,8}\.\d{1,8})', stock_price)
+
+                            stock_price = float(stock_price.group(1))
+                            # print(stock_price)
+                        except:
+                            try:
+                                stock_price = (source.split('<span class="time_rtq_ticker">')[1].split('</span>')[0])
+                                # print(stock_price)
+
+                                stock_price = re.search(r'(\d{1,8}\.\d{1,8})', stock_price)
+
+                                stock_price = float(stock_price.group(1))
+                                # print(stock_price)
+
+                            except:
+                                print("stock price", ticker, file, value)
+
+                    # set starting value if there isn't one
+                    if not starting_stock_value:
+                        starting_stock_value = stock_price
+                    if not starting_sp500_value:
+                        starting_sp500_value = sp500_value
+
+                    # calculate % change (new - old) / old * 100
+                    stock_p_change = ((stock_price - starting_stock_value) / starting_stock_value) * 100
+                    sp500_p_change = ((sp500_value - starting_sp500_value) / starting_sp500_value) * 100
+
+                    location = len(df['Date'])
+
+                    difference = stock_p_change - sp500_p_change
+                    if difference > 0:
+                        status = "outperform"
+                    else:
+                        status = "underperform"
 
                     df = df.append({'Date': date_stamp,
                                     'Unix': unix_time,
                                     'Ticker': ticker,
                                     'DE Ratio': value,
                                     'Price': stock_price,
-                                    'SP500': sp500_value}, ignore_index=True)
+                                    'stock_p_change': stock_p_change,
+                                    'SP500': sp500_value,
+                                    'sp500_p_change': sp500_p_change,
+                                    ############################
+                                    'Difference': difference,
+                                    'Status': status},
+                                   ignore_index=True)
 
                 except Exception as e:
+                    # print(ticker,e,file, value)
                     pass
+
+    # print(ticker_list)
+    # print(df)
+
+    for each_ticker in ticker_list:
+        try:
+            plot_df = df[(df['Ticker'] == each_ticker)]
+
+            plot_df = plot_df.set_index(['Date'])
+
+            if plot_df['Status'][-1] == 'underperform':
+                color = 'r'
+            else:
+                color = 'g'
+
+            plot_df['Difference'].plot(label=each_ticker, color=color)
+            plt.legend()
+        except Exception as e:
+            print(str(e))
+
+    plt.show()
 
     # specify custom name for the csv file
     # then using pandas to_csv capability to output the Data Frame to an actual CSV file
